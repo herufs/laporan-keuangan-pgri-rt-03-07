@@ -122,16 +122,32 @@
             position: relative;
         }
         
-        .chart-wrapper {
+        /* Chart wrapper untuk grafik batang dengan scroll horizontal */
+        .chart-wrapper-bar {
             position: relative;
             width: 100%;
             overflow-x: auto;
             overflow-y: hidden;
+            min-height: 350px;
         }
         
-        .chart-wrapper canvas {
+        .chart-wrapper-bar canvas {
             min-width: 400px;
             height: 300px !important;
+        }
+        
+        /* Chart container untuk pie chart - TANPA SCROLL */
+        .chart-wrapper-pie {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+        }
+        
+        .chart-wrapper-pie canvas {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 300px;
         }
         
         .scroll-indicator {
@@ -269,22 +285,22 @@
             box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
         }
         
-        /* Custom scrollbar */
-        .chart-wrapper::-webkit-scrollbar {
+        /* Custom scrollbar untuk grafik batang */
+        .chart-wrapper-bar::-webkit-scrollbar {
             height: 10px;
         }
         
-        .chart-wrapper::-webkit-scrollbar-track {
+        .chart-wrapper-bar::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
         
-        .chart-wrapper::-webkit-scrollbar-thumb {
+        .chart-wrapper-bar::-webkit-scrollbar-thumb {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border-radius: 10px;
         }
         
-        .chart-wrapper::-webkit-scrollbar-thumb:hover {
+        .chart-wrapper-bar::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(135deg, #5a0ca3, #1e5fcc);
         }
         
@@ -302,6 +318,10 @@
                 right: 10px;
                 font-size: 0.75rem;
                 padding: 6px 12px;
+            }
+            
+            .chart-wrapper-pie {
+                height: 250px;
             }
         }
     </style>
@@ -463,7 +483,7 @@
                             <p class="mb-0">Pastikan Anda terhubung ke internet</p>
                             <button class="btn btn-sm btn-outline-primary mt-2" onclick="retryMonthlyChart()">Coba Lagi</button>
                         </div>
-                        <div class="chart-wrapper" id="monthlyChartWrapper">
+                        <div class="chart-wrapper-bar" id="monthlyChartWrapper">
                             <div class="scroll-indicator" id="scrollIndicator">
                                 <i class="bi bi-arrows-left-right me-1"></i> Scroll untuk melihat data
                             </div>
@@ -483,7 +503,9 @@
                             <p class="mb-0">Pastikan Anda terhubung ke internet</p>
                             <button class="btn btn-sm btn-outline-primary mt-2" onclick="retryPieChart()">Coba Lagi</button>
                         </div>
-                        <canvas id="pieChart" height="200"></canvas>
+                        <div class="chart-wrapper-pie">
+                            <canvas id="pieChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -922,7 +944,7 @@
             }
         }
 
-        // Update pie chart
+        // Update pie chart - PERBAIKAN UTAMA
         function updatePieChart() {
             try {
                 const totalPemasukan = filteredTransaksi
@@ -949,6 +971,11 @@
                 
                 hideChartError('pieChartError');
                 
+                // Pastikan canvas memiliki ukuran yang jelas
+                ctx.style.width = '100%';
+                ctx.style.height = '100%';
+                ctx.style.maxHeight = '300px';
+                
                 pieChart = new Chart(ctx2d, {
                     type: 'doughnut',
                     data: {
@@ -963,7 +990,8 @@
                                 'rgba(86, 204, 242, 1)',
                                 'rgba(255, 65, 108, 1)'
                             ],
-                            borderWidth: 1
+                            borderWidth: 1,
+                            hoverOffset: 4
                         }]
                     },
                     options: {
@@ -972,6 +1000,12 @@
                         plugins: {
                             legend: {
                                 position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
                             },
                             tooltip: {
                                 callbacks: {
@@ -984,9 +1018,23 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: false
                         }
                     }
                 });
+                
+                // Fix untuk mencegah scroll tak terbatas
+                setTimeout(() => {
+                    const wrapper = ctx.parentElement;
+                    if (wrapper) {
+                        wrapper.style.overflow = 'hidden';
+                        wrapper.style.height = '300px';
+                    }
+                }, 100);
+                
             } catch (error) {
                 console.error('Error creating pie chart:', error);
                 showChartError('pieChartError');
@@ -1106,4 +1154,3 @@
     </script>
 </body>
 </html>
-

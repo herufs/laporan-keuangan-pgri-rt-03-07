@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Keuangan Warga Komplek PGRI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .saldo-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        .pemasukan-card {
+            background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+            color: white;
+        }
+        .pengeluaran-card {
+            background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
+            color: white;
+        }
+        .table-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+        .table thead {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border: none;
+            border-radius: 30px;
+            padding: 10px 25px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+        }
+        .btn-danger {
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .btn-danger:hover {
+            transform: scale(1.05);
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            padding: 12px 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.25);
+            border-color: #6a11cb;
+        }
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 20px 0;
+            margin-top: 50px;
+            text-align: center;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1050;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .notification.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .notification.error {
+            background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
+        }
+        .config-section {
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px dashed #dee2e6;
+        }
+        .admin-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        .login-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h2 {
+            color: #6a11cb;
+            font-weight: 700;
+        }
+        .protected-content {
+            display: none;
+        }
+        .admin-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="bi bi-shield-lock" style="font-size: 3rem; color: #6a11cb;"></i>
+                <h2>Login Admin</h2>
+                <p class="text-muted">Masukkan kredensial admin untuk melanjutkan</p>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-box-arrow-in-right"></i> Login
+                </button>
+            </form>
+            <small class="text-muted d-block text-center mt-3">Hubungi ketua RT untuk mendapatkan akses admin</small>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="protected-content">
+        <!-- Header -->
+        <div class="header">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="mb-0"><i class="bi bi-building"></i> Laporan Keuangan Warga Komplek PGRI</h1>
+                        <p class="mb-0 mt-2 opacity-75">Sistem pencatatan keuangan untuk pengelolaan dana warga</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="admin-badge me-2">
+                            <i class="bi bi-person-badge"></i> <span id="adminName">Admin</span>
+                        </span>
+                        <button class="btn btn-light" onclick="exportData()">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                        <button class="btn btn-outline-light ms-2" onclick="logout()">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Admin Panel -->
+            <div class="admin-panel">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="bi bi-shield-check"></i> Panel Admin</h5>
+                        <small>Anda memiliki akses penuh untuk mengelola transaksi</small>
+                    </div>
+                    <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#tambahModal">
+                        <i class="bi bi-plus-circle"></i> Tambah Transaksi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Konfigurasi Google Apps Script -->
+            <div class="config-section">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <label for="scriptUrl" class="form-label">URL Google Apps Script</label>
+                        <input type="text" class="form-control" id="scriptUrl" placeholder="https://script.google.com/macros/s/...">
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary mt-4" onclick="saveConfig()">Simpan Konfigurasi</button>
+                    </div>
+                </div>
+                <small class="text-muted">Masukkan URL Google Apps Script yang sudah di-deploy sebagai web app</small>
+            </div>
+
+            <!-- Kartu Ringkasan -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card saldo-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Saldo Saat Ini</h6>
+                                    <h2 class="mb-0" id="saldo">Rp 0</h2>
+                                </div>
+                                <div class="fs-1">
+                                    <i class="bi bi-cash-stack"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card pemasukan-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Total Pemasukan</h6>
+                                    <h2 class="mb-0" id="pemasukan">Rp 0</h2>
+                                </div>
+                                <div class="fs-1">
+                                    <i class="bi bi-arrow-down-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card pengeluaran-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Total Pengeluaran</h6>
+                                    <h2 class="mb-0" id="pengeluaran">Rp 0</h2>
+                                </div>
+                                <div class="fs-1">
+                                    <i class="bi bi-arrow-up-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Refresh -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <button class="btn btn-outline-primary" onclick="refreshData()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Memuat data...</p>
+            </div>
+
+            <!-- Tabel Transaksi -->
+            <div class="table-container">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Keterangan</th>
+                            <th>Jenis</th>
+                            <th>Jumlah</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelTransaksi">
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <p>Belum ada data transaksi</p>
+                                <small>Tambahkan transaksi baru untuk memulai</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal Tambah Transaksi -->
+        <div class="modal fade" id="tambahModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Tambah Transaksi Baru</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formTransaksi">
+                            <div class="mb-3">
+                                <label for="tanggal" class="form-label">Tanggal</label>
+                                <input type="date" class="form-control" id="tanggal" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="keterangan" class="form-label">Keterangan</label>
+                                <input type="text" class="form-control" id="keterangan" placeholder="Contoh: Iuran bulan Juni" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="jenis" class="form-label">Jenis Transaksi</label>
+                                <select class="form-select" id="jenis" required>
+                                    <option value="">Pilih jenis transaksi</option>
+                                    <option value="pemasukan">Pemasukan</option>
+                                    <option value="pengeluaran">Pengeluaran</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="jumlah" class="form-label">Jumlah (Rp)</label>
+                                <input type="number" class="form-control" id="jumlah" placeholder="0" min="0" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" onclick="tambahTransaksi()">Simpan Transaksi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="container">
+                <p class="mb-0">© 2023 Sistem Keuangan Warga Komplek PGRI | Dikembangkan untuk kemudahan pengelolaan dana warga</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Konfigurasi admin (dalam aplikasi nyata, sebaiknya disimpan di server)
+        const ADMIN_CREDENTIALS = {
+            username: 'admin',
+            password: 'pgri2023' // Ganti dengan password yang aman
+        };
+
+        // Inisialisasi data
+        let transaksi = [];
+        let scriptUrl = localStorage.getItem('scriptUrl') || '';
+        let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        let currentUser = localStorage.getItem('currentUser') || '';
+
+        // Cek status login saat halaman dimuat
+        window.onload = function() {
+            if (isLoggedIn) {
+                showMainApp();
+                document.getElementById('adminName').textContent = currentUser;
+                document.getElementById('scriptUrl').value = scriptUrl;
+                if (scriptUrl) {
+                    refreshData();
+                }
+            } else {
+                showLoginScreen();
+            }
+        };
+
+        // Tampilkan layar login
+        function showLoginScreen() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('mainApp').style.display = 'none';
+        }
+
+        // Tampilkan aplikasi utama
+        function showMainApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+        }
+
+        // Handle login
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+                // Login berhasil
+                isLoggedIn = true;
+                currentUser = username;
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('currentUser', username);
+                
+                showMainApp();
+                document.getElementById('adminName').textContent = username;
+                
+                // Load data jika sudah ada konfigurasi
+                if (scriptUrl) {
+                    refreshData();
+                }
+                
+                showNotification('Login berhasil! Selamat datang, ' + username);
+            } else {
+                // Login gagal
+                showNotification('Username atau password salah!', 'error');
+                document.getElementById('password').value = '';
+            }
+        }
+
+        // Logout
+        function logout() {
+            isLoggedIn = false;
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('currentUser');
+            showLoginScreen();
+            showNotification('Anda telah logout');
+        }
+
+        // Format mata uang
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(angka);
+        }
+        
+        // Format tanggal
+        function formatDate(dateString) {
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return new Date(dateString).toLocaleDateString('id-ID', options);
+        }
+        
+        // Tampilkan notifikasi
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Simpan konfigurasi URL
+        function saveConfig() {
+            const urlInput = document.getElementById('scriptUrl').value;
+            if (!urlInput) {
+                showNotification('URL tidak boleh kosong', 'error');
+                return;
+            }
+            
+            scriptUrl = urlInput;
+            localStorage.setItem('scriptUrl', scriptUrl);
+            showNotification('Konfigurasi berhasil disimpan');
+            
+            // Refresh data setelah menyimpan konfigurasi
+            refreshData();
+        }
+        
+        // Hitung ringkasan
+        function hitungRingkasan() {
+            const totalPemasukan = transaksi
+                .filter(t => t.jenis === 'pemasukan')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                
+            const totalPengeluaran = transaksi
+                .filter(t => t.jenis === 'pengeluaran')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                
+            const saldo = totalPemasukan - totalPengeluaran;
+            
+            document.getElementById('saldo').textContent = formatRupiah(saldo);
+            document.getElementById('pemasukan').textContent = formatRupiah(totalPemasukan);
+            document.getElementById('pengeluaran').textContent = formatRupiah(totalPengeluaran);
+        }
+        
+        // Tampilkan tabel
+        function tampilkanTabel() {
+            const tbody = document.getElementById('tabelTransaksi');
+            
+            if (transaksi.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>Belum ada data transaksi</p>
+                            <small>Tambahkan transaksi baru untuk memulai</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = transaksi.map(t => `
+                <tr>
+                    <td>${formatDate(t.tanggal)}</td>
+                    <td>${t.keterangan}</td>
+                    <td>
+                        <span class="badge bg-${t.jenis === 'pemasukan' ? 'success' : 'danger'}">
+                            ${t.jenis === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                        </span>
+                    </td>
+                    <td>${formatRupiah(parseFloat(t.jumlah))}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="hapusTransaksi('${t.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // Tambah transaksi
+        function tambahTransaksi() {
+            if (!isLoggedIn) {
+                showNotification('Anda harus login sebagai admin!', 'error');
+                return;
+            }
+            
+            if (!scriptUrl) {
+                showNotification('URL Google Apps Script belum dikonfigurasi', 'error');
+                return;
+            }
+            
+            const tanggal = document.getElementById('tanggal').value;
+            const keterangan = document.getElementById('keterangan').value;
+            const jenis = document.getElementById('jenis').value;
+            const jumlah = document.getElementById('jumlah').value;
+            
+            if (!tanggal || !keterangan || !jenis || !jumlah) {
+                showNotification('Semua field harus diisi', 'error');
+                return;
+            }
+            
+            // Tampilkan loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            // Kirim data ke Google Apps Script
+            fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=create&tanggal=${tanggal}&keterangan=${keterangan}&jenis=${jenis}&jumlah=${jumlah}`
+            })
+            .then(response => {
+                // Reset form
+                document.getElementById('formTransaksi').reset();
+                
+                // Tutup modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('tambahModal'));
+                modal.hide();
+                
+                // Refresh data
+                refreshData();
+                
+                showNotification('Transaksi berhasil ditambahkan');
+            })
+            .catch(error => {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                showNotification('Gagal menambah transaksi: ' + error.message, 'error');
+            });
+        }
+        
+        // Hapus transaksi
+        function hapusTransaksi(id) {
+            if (!isLoggedIn) {
+                showNotification('Anda harus login sebagai admin!', 'error');
+                return;
+            }
+            
+            if (!scriptUrl) {
+                showNotification('URL Google Apps Script belum dikonfigurasi', 'error');
+                return;
+            }
+            
+            if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+                return;
+            }
+            
+            // Tampilkan loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            // Kirim permintaan hapus ke Google Apps Script
+            fetch(scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=delete&id=${id}`
+            })
+            .then(response => {
+                // Refresh data
+                refreshData();
+                
+                showNotification('Transaksi berhasil dihapus');
+            })
+            .catch(error => {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                showNotification('Gagal menghapus transaksi: ' + error.message, 'error');
+            });
+        }
+        
+        // Refresh data dari server
+        function refreshData() {
+            if (!scriptUrl) {
+                showNotification('URL Google Apps Script belum dikonfigurasi', 'error');
+                return;
+            }
+            
+            // Tampilkan loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            
+            // Ambil data dari Google Apps Script
+            fetch(`${scriptUrl}?action=read`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    
+                    if (data.status === 'success') {
+                        transaksi = data.data;
+                        tampilkanTabel();
+                        hitungRingkasan();
+                    } else {
+                        showNotification('Gagal memuat data: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    showNotification('Gagal memuat data: ' + error.message, 'error');
+                });
+        }
+        
+        // Export data ke CSV
+        function exportData() {
+            if (transaksi.length === 0) {
+                showNotification('Tidak ada data untuk diekspor', 'error');
+                return;
+            }
+            
+            let csv = 'Tanggal,Keterangan,Jenis,Jumlah\n';
+            transaksi.forEach(t => {
+                csv += `${t.tanggal},"${t.keterangan}",${t.jenis},${t.jumlah}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `laporan_keuangan_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showNotification('Data berhasil diekspor');
+        }
+        
+        // Set tanggal default ke hari ini
+        document.getElementById('tanggal').valueAsDate = new Date();
+    </script>
+</body>
+</html>

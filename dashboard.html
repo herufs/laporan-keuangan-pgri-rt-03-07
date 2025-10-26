@@ -14,6 +14,7 @@
             --success-color: #11998e;
             --danger-color: #FF416C;
             --light-bg: #f8f9fa;
+            --warning-color: #ffc107;
         }
         
         body {
@@ -118,6 +119,52 @@
             padding: 20px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.08);
             margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        .chart-wrapper canvas {
+            min-width: 400px;
+        }
+        
+        .scroll-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: none;
+            z-index: 5;
+        }
+        
+        .chart-error {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            z-index: 10;
+        }
+        
+        .chart-error i {
+            font-size: 3rem;
+            color: var(--danger-color);
+            margin-bottom: 15px;
         }
         
         .footer {
@@ -178,6 +225,50 @@
             margin-bottom: 30px;
         }
         
+        .error-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+        }
+        
+        .retry-btn {
+            background-color: var(--warning-color);
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+        }
+        
+        /* Custom scrollbar */
+        .chart-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .chart-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .chart-wrapper::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .chart-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
         @media (max-width: 768px) {
             .card {
                 margin-bottom: 20px;
@@ -185,6 +276,10 @@
             
             .chart-container {
                 padding: 15px;
+            }
+            
+            .scroll-indicator {
+                display: block !important;
             }
         }
     </style>
@@ -208,6 +303,19 @@
     </div>
 
     <div class="container">
+        <!-- Error Box -->
+        <div class="error-box" id="errorBox">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h5 class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> Terjadi Kesalahan</h5>
+                    <p class="mb-0" id="errorMessage">Tidak dapat memuat data. Silakan coba lagi.</p>
+                </div>
+                <button class="retry-btn" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise"></i> Coba Lagi
+                </button>
+            </div>
+        </div>
+
         <!-- Info Box -->
         <div class="info-box">
             <div class="d-flex align-items-center">
@@ -325,8 +433,20 @@
                         <div class="section-title">
                             <i class="bi bi-bar-chart"></i>
                             <span>Grafik Transaksi Bulanan</span>
+                            <small class="text-muted ms-2"><i class="bi bi-arrows-left-right"></i> Scroll horizontal untuk melihat semua data</small>
                         </div>
-                        <canvas id="monthlyChart" height="100"></canvas>
+                        <div class="chart-error" id="monthlyChartError" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <h6>Grafik tidak dapat dimuat</h6>
+                            <p class="mb-0">Pastikan Anda terhubung ke internet</p>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="retryMonthlyChart()">Coba Lagi</button>
+                        </div>
+                        <div class="chart-wrapper" id="monthlyChartWrapper">
+                            <div class="scroll-indicator">
+                                <i class="bi bi-arrows-left-right"></i> Scroll
+                            </div>
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
                     </div>
                 </div>
                 <div class="col-lg-4">
@@ -334,6 +454,12 @@
                         <div class="section-title">
                             <i class="bi bi-pie-chart"></i>
                             <span>Perbandingan Transaksi</span>
+                        </div>
+                        <div class="chart-error" id="pieChartError" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <h6>Grafik tidak dapat dimuat</h6>
+                            <p class="mb-0">Pastikan Anda terhubung ke internet</p>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="retryPieChart()">Coba Lagi</button>
                         </div>
                         <canvas id="pieChart" height="200"></canvas>
                     </div>
@@ -387,18 +513,54 @@
         // KONFIGURASI - GANTI URL DI SINI
         // ===============================================
         // Ganti URL di bawah ini dengan URL Google Apps Script yang sudah di-deploy
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4d37Aj9mf5vho1fskGDVYWZvdcPRIe2mNcHiEKYjwnq0-UciALwYtT-GENXcTjiOP/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXEXAMPLEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/exec";
         
         // Inisialisasi data
         let allTransaksi = [];
         let filteredTransaksi = [];
         let monthlyChart = null;
         let pieChart = null;
+        let chartJsLoaded = false;
 
         // Cek konfigurasi saat halaman dimuat
         window.onload = function() {
+            checkChartJs();
             refreshData();
+            
+            // Cek scroll untuk grafik
+            checkScroll();
         };
+
+        // Cek apakah Chart.js berhasil dimuat
+        function checkChartJs() {
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js tidak berhasil dimuat');
+                showChartError('monthlyChartError');
+                showChartError('pieChartError');
+            } else {
+                chartJsLoaded = true;
+            }
+        }
+
+        // Cek scroll untuk grafik
+        function checkScroll() {
+            const chartWrapper = document.getElementById('monthlyChartWrapper');
+            const scrollIndicator = chartWrapper.querySelector('.scroll-indicator');
+            
+            if (chartWrapper.scrollWidth > chartWrapper.clientWidth) {
+                scrollIndicator.style.display = 'block';
+                
+                // Sembunyikan indikator setelah user mulai scroll
+                chartWrapper.addEventListener('scroll', function() {
+                    scrollIndicator.style.opacity = '0';
+                    setTimeout(() => {
+                        scrollIndicator.style.display = 'none';
+                    }, 2000);
+                });
+            } else {
+                scrollIndicator.style.display = 'none';
+            }
+        }
 
         // Format mata uang
         function formatRupiah(angka) {
@@ -425,16 +587,51 @@
             };
         }
 
+        // Tampilkan error box
+        function showErrorBox(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
+        // Sembunyikan error box
+        function hideErrorBox() {
+            document.getElementById('errorBox').style.display = 'none';
+        }
+
+        // Tampilkan error untuk grafik
+        function showChartError(chartId) {
+            const errorElement = document.getElementById(chartId + 'Error');
+            if (errorElement) {
+                errorElement.style.display = 'flex';
+            }
+        }
+
+        // Sembunyikan error untuk grafik
+        function hideChartError(chartId) {
+            const errorElement = document.getElementById(chartId + 'Error');
+            if (errorElement) {
+                errorElement.style.display = 'none';
+            }
+        }
+
         // Refresh data dari server
         function refreshData() {
             // Tampilkan loading
             document.getElementById('loadingIndicator').style.display = 'block';
             document.getElementById('mainContent').style.display = 'none';
             document.getElementById('emptyState').style.display = 'none';
+            hideErrorBox();
 
             // Ambil data dari Google Apps Script
             fetch(`${SCRIPT_URL}?action=read`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('loadingIndicator').style.display = 'none';
 
@@ -453,7 +650,8 @@
                         // Jika gagal memuat data, tampilkan pesan error
                         document.getElementById('emptyState').style.display = 'block';
                         document.querySelector('#emptyState h4').textContent = 'Gagal Memuat Data';
-                        document.querySelector('#emptyState p').textContent = 'Terjadi kesalahan saat memuat data. Silakan coba lagi nanti atau hubungi admin.';
+                        document.querySelector('#emptyState p').textContent = data.message || 'Terjadi kesalahan saat memuat data. Silakan coba lagi nanti atau hubungi admin.';
+                        showErrorBox(data.message || 'Gagal memuat data dari server');
                     }
                 })
                 .catch(error => {
@@ -461,16 +659,22 @@
                     document.getElementById('emptyState').style.display = 'block';
                     document.querySelector('#emptyState h4').textContent = 'Gagal Memuat Data';
                     document.querySelector('#emptyState p').textContent = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda atau hubungi admin.';
+                    showErrorBox('Koneksi error: ' + error.message);
                     console.error('Error:', error);
                 });
         }
 
         // Update dashboard
         function updateDashboard() {
-            hitungRingkasan();
-            tampilkanTabel();
-            updateCharts();
-            updateLastUpdated();
+            try {
+                hitungRingkasan();
+                tampilkanTabel();
+                updateCharts();
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+                showErrorBox('Gagal memperbarui dashboard: ' + error.message);
+            }
         }
 
         // Hitung ringkasan
@@ -521,145 +725,224 @@
 
         // Update charts
         function updateCharts() {
-            updateMonthlyChart();
-            updatePieChart();
+            if (!chartJsLoaded) {
+                console.warn('Chart.js belum dimuat, melewati update grafik');
+                return;
+            }
+            
+            try {
+                updateMonthlyChart();
+                updatePieChart();
+            } catch (error) {
+                console.error('Error updating charts:', error);
+                showChartError('monthlyChartError');
+                showChartError('pieChartError');
+            }
         }
 
         // Update monthly chart
         function updateMonthlyChart() {
-            const monthlyData = {};
-            
-            filteredTransaksi.forEach(t => {
-                const date = formatDateForFilter(t.tanggal);
-                const key = `${date.year}-${date.month}`;
+            try {
+                const monthlyData = {};
                 
-                if (!monthlyData[key]) {
-                    monthlyData[key] = { pemasukan: 0, pengeluaran: 0 };
+                filteredTransaksi.forEach(t => {
+                    const date = formatDateForFilter(t.tanggal);
+                    const key = `${date.year}-${date.month}`;
+                    
+                    if (!monthlyData[key]) {
+                        monthlyData[key] = { pemasukan: 0, pengeluaran: 0 };
+                    }
+                    
+                    monthlyData[key][t.jenis] += parseFloat(t.jumlah);
+                });
+
+                const sortedMonths = Object.keys(monthlyData).sort();
+                const labels = sortedMonths.map(month => {
+                    const [year, monthNum] = month.split('-');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    return `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+                });
+                
+                const pemasukanData = sortedMonths.map(month => monthlyData[month].pemasukan);
+                const pengeluaranData = sortedMonths.map(month => monthlyData[month].pengeluaran);
+
+                const ctx = document.getElementById('monthlyChart');
+                if (!ctx) {
+                    throw new Error('Canvas untuk monthly chart tidak ditemukan');
                 }
                 
-                monthlyData[key][t.jenis] += parseFloat(t.jumlah);
-            });
-
-            const sortedMonths = Object.keys(monthlyData).sort();
-            const labels = sortedMonths.map(month => {
-                const [year, monthNum] = month.split('-');
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-                return `${monthNames[parseInt(monthNum) - 1]} ${year}`;
-            });
-            
-            const pemasukanData = sortedMonths.map(month => monthlyData[month].pemasukan);
-            const pengeluaranData = sortedMonths.map(month => monthlyData[month].pengeluaran);
-
-            const ctx = document.getElementById('monthlyChart').getContext('2d');
-            
-            if (monthlyChart) {
-                monthlyChart.destroy();
-            }
-            
-            monthlyChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Pemasukan',
-                            data: pemasukanData,
-                            backgroundColor: 'rgba(86, 204, 242, 0.8)',
-                            borderColor: 'rgba(86, 204, 242, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Pengeluaran',
-                            data: pengeluaranData,
-                            backgroundColor: 'rgba(255, 65, 108, 0.8)',
-                            borderColor: 'rgba(255, 65, 108, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'Rp ' + value.toLocaleString('id-ID');
+                const ctx2d = ctx.getContext('2d');
+                if (!ctx2d) {
+                    throw new Error('Tidak dapat mendapatkan 2D context untuk monthly chart');
+                }
+                
+                if (monthlyChart) {
+                    monthlyChart.destroy();
+                }
+                
+                hideChartError('monthlyChartError');
+                
+                // Hitung lebar minimum yang dibutuhkan
+                const minBarWidth = 60; // Lebar minimum per bar
+                const barGap = 20; // Jarak antar bar
+                const groupGap = 40; // Jarak antar grup (bulan)
+                const totalGroups = labels.length;
+                const minCanvasWidth = (minBarWidth * 2 + barGap) * totalGroups + groupGap * (totalGroups - 1);
+                
+                // Set lebar canvas
+                ctx.style.minWidth = Math.max(minCanvasWidth, 400) + 'px';
+                
+                monthlyChart = new Chart(ctx2d, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Pemasukan',
+                                data: pemasukanData,
+                                backgroundColor: 'rgba(86, 204, 242, 0.8)',
+                                borderColor: 'rgba(86, 204, 242, 1)',
+                                borderWidth: 1,
+                                barPercentage: 0.8,
+                                categoryPercentage: 0.9
+                            },
+                            {
+                                label: 'Pengeluaran',
+                                data: pengeluaranData,
+                                backgroundColor: 'rgba(255, 65, 108, 0.8)',
+                                borderColor: 'rgba(255, 65, 108, 1)',
+                                borderWidth: 1,
+                                barPercentage: 0.8,
+                                categoryPercentage: 0.9
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'Rp ' + value.toLocaleString('id-ID');
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
                                 }
                             }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': Rp ' + context.parsed.y.toLocaleString('id-ID');
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                    }
                                 }
+                            }
+                        },
+                        animation: {
+                            onComplete: function() {
+                                // Cek scroll setelah animasi selesai
+                                setTimeout(checkScroll, 500);
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error creating monthly chart:', error);
+                showChartError('monthlyChartError');
+            }
         }
 
         // Update pie chart
         function updatePieChart() {
-            const totalPemasukan = filteredTransaksi
-                .filter(t => t.jenis === 'pemasukan')
-                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
-                
-            const totalPengeluaran = filteredTransaksi
-                .filter(t => t.jenis === 'pengeluaran')
-                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+            try {
+                const totalPemasukan = filteredTransaksi
+                    .filter(t => t.jenis === 'pemasukan')
+                    .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                    
+                const totalPengeluaran = filteredTransaksi
+                    .filter(t => t.jenis === 'pengeluaran')
+                    .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
 
-            const ctx = document.getElementById('pieChart').getContext('2d');
-            
-            if (pieChart) {
-                pieChart.destroy();
-            }
-            
-            pieChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pemasukan', 'Pengeluaran'],
-                    datasets: [{
-                        data: [totalPemasukan, totalPengeluaran],
-                        backgroundColor: [
-                            'rgba(86, 204, 242, 0.8)',
-                            'rgba(255, 65, 108, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(86, 204, 242, 1)',
-                            'rgba(255, 65, 108, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = 'Rp ' + context.parsed.toLocaleString('id-ID');
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                    return label + ': ' + value + ' (' + percentage + '%)';
+                const ctx = document.getElementById('pieChart');
+                if (!ctx) {
+                    throw new Error('Canvas untuk pie chart tidak ditemukan');
+                }
+                
+                const ctx2d = ctx.getContext('2d');
+                if (!ctx2d) {
+                    throw new Error('Tidak dapat mendapatkan 2D context untuk pie chart');
+                }
+                
+                if (pieChart) {
+                    pieChart.destroy();
+                }
+                
+                hideChartError('pieChartError');
+                
+                pieChart = new Chart(ctx2d, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pemasukan', 'Pengeluaran'],
+                        datasets: [{
+                            data: [totalPemasukan, totalPengeluaran],
+                            backgroundColor: [
+                                'rgba(86, 204, 242, 0.8)',
+                                'rgba(255, 65, 108, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(86, 204, 242, 1)',
+                                'rgba(255, 65, 108, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = 'Rp ' + context.parsed.toLocaleString('id-ID');
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        return label + ': ' + value + ' (' + percentage + '%)';
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error creating pie chart:', error);
+                showChartError('pieChartError');
+            }
+        }
+
+        // Retry monthly chart
+        function retryMonthlyChart() {
+            hideChartError('monthlyChartError');
+            updateMonthlyChart();
+        }
+
+        // Retry pie chart
+        function retryPieChart() {
+            hideChartError('pieChartError');
+            updatePieChart();
         }
 
         // Populate filter options

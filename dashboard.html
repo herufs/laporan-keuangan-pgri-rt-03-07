@@ -69,6 +69,25 @@
             color: white;
         }
         
+        .table tbody tr:hover {
+            background-color: rgba(0,0,0,.02);
+        }
+        
+        .saldo-positive {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+        
+        .saldo-negative {
+            color: var(--danger-color);
+            font-weight: 600;
+        }
+        
+        .saldo-zero {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             border: none;
@@ -323,6 +342,10 @@
             .chart-wrapper-pie {
                 height: 250px;
             }
+            
+            .table-container {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -514,7 +537,7 @@
             <div class="table-container mt-4">
                 <div class="section-title p-3 border-bottom">
                     <i class="bi bi-table"></i>
-                    <span>Detail Transaksi</span>
+                    <span>Riwayat Transaksi</span>
                     <span class="last-updated float-end" id="lastUpdated"></span>
                 </div>
                 <div class="table-responsive">
@@ -525,6 +548,7 @@
                                 <th>Keterangan</th>
                                 <th>Jenis</th>
                                 <th>Jumlah</th>
+                                <th>Saldo Kas</th>
                             </tr>
                         </thead>
                         <tbody id="tabelTransaksi">
@@ -717,14 +741,14 @@
             document.getElementById('pengeluaran').textContent = formatRupiah(totalPengeluaran);
         }
 
-        // Tampilkan tabel
+        // Tampilkan tabel dengan saldo kas
         function tampilkanTabel() {
             const tbody = document.getElementById('tabelTransaksi');
             
             if (filteredTransaksi.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" class="text-center py-4">
+                        <td colspan="5" class="text-center py-4">
                             <p class="mb-0">Tidak ada data transaksi untuk filter yang dipilih</p>
                         </td>
                     </tr>
@@ -732,18 +756,44 @@
                 return;
             }
             
-            tbody.innerHTML = filteredTransaksi.map(t => `
-                <tr>
-                    <td>${formatDate(t.tanggal)}</td>
-                    <td>${t.keterangan}</td>
-                    <td>
-                        <span class="badge ${t.jenis === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}">
-                            ${t.jenis === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
-                        </span>
-                    </td>
-                    <td>${formatRupiah(parseFloat(t.jumlah))}</td>
-                </tr>
-            `).join('');
+            // Urutkan transaksi berdasarkan tanggal
+            const sortedTransaksi = [...filteredTransaksi].sort((a, b) => {
+                return new Date(a.tanggal) - new Date(b.tanggal);
+            });
+            
+            // Hitung saldo kumulatif
+            let saldoKumulatif = 0;
+            
+            tbody.innerHTML = sortedTransaksi.map((t, index) => {
+                // Hitung saldo untuk transaksi ini
+                if (t.jenis === 'pemasukan') {
+                    saldoKumulatif += parseFloat(t.jumlah);
+                } else {
+                    saldoKumulatif -= parseFloat(t.jumlah);
+                }
+                
+                // Tentukan class untuk warna saldo
+                let saldoClass = 'saldo-zero';
+                if (saldoKumulatif > 0) {
+                    saldoClass = 'saldo-positive';
+                } else if (saldoKumulatif < 0) {
+                    saldoClass = 'saldo-negative';
+                }
+                
+                return `
+                    <tr>
+                        <td>${formatDate(t.tanggal)}</td>
+                        <td>${t.keterangan}</td>
+                        <td>
+                            <span class="badge ${t.jenis === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}">
+                                ${t.jenis === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                            </span>
+                        </td>
+                        <td>${formatRupiah(parseFloat(t.jumlah))}</td>
+                        <td class="${saldoClass}">${formatRupiah(saldoKumulatif)}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         // Update charts
@@ -1122,9 +1172,24 @@
                 return;
             }
 
-            let csv = 'Tanggal,Keterangan,Jenis,Jumlah\n';
-            filteredTransaksi.forEach(t => {
-                csv += `${t.tanggal},"${t.keterangan}",${t.jenis},${t.jumlah}\n`;
+            // Urutkan transaksi berdasarkan tanggal untuk export
+            const sortedTransaksi = [...filteredTransaksi].sort((a, b) => {
+                return new Date(a.tanggal) - new Date(b.tanggal);
+            });
+            
+            // Hitung saldo kumulatif untuk export
+            let saldoKumulatif = 0;
+
+            let csv = 'Tanggal,Keterangan,Jenis,Jumlah,Saldo Kas\n';
+            sortedTransaksi.forEach(t => {
+                // Hitung saldo untuk transaksi ini
+                if (t.jenis === 'pemasukan') {
+                    saldoKumulatif += parseFloat(t.jumlah);
+                } else {
+                    saldoKumulatif -= parseFloat(t.jumlah);
+                }
+                
+                csv += `${t.tanggal},"${t.keterangan}",${t.jenis},${t.jumlah},${saldoKumulatif}\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -1136,6 +1201,8 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            
+            showNotification('Data berhasil diekspor dengan saldo kas');
         }
 
         // Update last updated time
@@ -1150,6 +1217,44 @@
             };
             document.getElementById('lastUpdated').textContent = 
                 'Terakhir diperbarui: ' + now.toLocaleDateString('id-ID', options);
+        }
+
+        // Tampilkan notifikasi
+        function showNotification(message, type = 'success') {
+            // Buat elemen notifikasi
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '15px 20px';
+            notification.style.borderRadius = '10px';
+            notification.style.color = 'white';
+            notification.style.fontWeight = '500';
+            notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            notification.style.zIndex = '1050';
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(-20px)';
+            notification.style.transition = 'all 0.3s ease';
+            
+            // Tambahkan ke body
+            document.body.appendChild(notification);
+            
+            // Tampilkan notifikasi
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Sembunyikan notifikasi setelah 3 detik
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(-20px)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
         }
     </script>
 </body>

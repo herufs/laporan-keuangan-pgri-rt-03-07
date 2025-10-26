@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Laporan Keuangan - Warga Komplek PGRI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css">
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --success-color: #11998e;
+            --danger-color: #FF416C;
+            --light-bg: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .saldo-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .pemasukan-card {
+            background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+            color: white;
+        }
+        
+        .pengeluaran-card {
+            background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);
+            color: white;
+        }
+        
+        .table-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            background: white;
+        }
+        
+        .table thead {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 30px;
+            padding: 10px 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+            border-radius: 30px;
+            padding: 10px 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #dee2e6;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 30px 0;
+            margin-top: 50px;
+            text-align: center;
+        }
+        
+        .last-updated {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        
+        .stats-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        
+        .badge-pemasukan {
+            background-color: #56CCF2;
+            color: white;
+        }
+        
+        .badge-pengeluaran {
+            background-color: #FF416C;
+            color: white;
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: var(--primary-color);
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .card {
+                margin-bottom: 20px;
+            }
+            
+            .chart-container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Dashboard Laporan Keuangan</h1>
+                    <p class="mb-0 mt-2 opacity-75">Laporan keuangan warga Komplek PGRI - Akses Publik</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light" onclick="exportData()">
+                        <i class="bi bi-download"></i> Download Laporan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Info Box -->
+        <div class="info-box">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle-fill me-3" style="font-size: 2rem;"></i>
+                <div>
+                    <h5 class="mb-1">Dashboard Publik</h5>
+                    <p class="mb-0">Dashboard ini menampilkan laporan keuangan warga Komplek PGRI secara real-time. Data diperbarui otomatis setiap ada transaksi baru.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="section-title">
+                <i class="bi bi-funnel"></i>
+                <span>Filter Data</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="filterMonth" class="form-label">Filter Bulan</label>
+                    <select class="form-select" id="filterMonth" onchange="filterData()">
+                        <option value="">Semua Bulan</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filterYear" class="form-label">Filter Tahun</label>
+                    <select class="form-select" id="filterYear" onchange="filterData()">
+                        <option value="">Semua Tahun</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filterType" class="form-label">Filter Jenis</label>
+                    <select class="form-select" id="filterType" onchange="filterData()">
+                        <option value="">Semua Jenis</option>
+                        <option value="pemasukan">Pemasukan</option>
+                        <option value="pengeluaran">Pengeluaran</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Memuat data laporan keuangan...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <i class="bi bi-inbox"></i>
+            <h4>Belum Ada Data</h4>
+            <p>Belum ada data laporan keuangan yang tersedia. Silakan hubungi admin untuk menambahkan data.</p>
+            <button class="btn btn-primary" onclick="refreshData()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" style="display: none;">
+            <!-- Kartu Ringkasan -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card saldo-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Saldo Saat Ini</h6>
+                                    <h2 class="mb-0" id="saldo">Rp 0</h2>
+                                </div>
+                                <div class="stats-icon">
+                                    <i class="bi bi-cash-stack"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card pemasukan-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Total Pemasukan</h6>
+                                    <h2 class="mb-0" id="pemasukan">Rp 0</h2>
+                                </div>
+                                <div class="stats-icon">
+                                    <i class="bi bi-arrow-down-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card pengeluaran-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title">Total Pengeluaran</h6>
+                                    <h2 class="mb-0" id="pengeluaran">Rp 0</h2>
+                                </div>
+                                <div class="stats-icon">
+                                    <i class="bi bi-arrow-up-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="chart-container">
+                        <div class="section-title">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>Grafik Transaksi Bulanan</span>
+                        </div>
+                        <canvas id="monthlyChart" height="100"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="chart-container">
+                        <div class="section-title">
+                            <i class="bi bi-pie-chart"></i>
+                            <span>Perbandingan Transaksi</span>
+                        </div>
+                        <canvas id="pieChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Transaksi -->
+            <div class="table-container mt-4">
+                <div class="section-title p-3 border-bottom">
+                    <i class="bi bi-table"></i>
+                    <span>Detail Transaksi</span>
+                    <span class="last-updated float-end" id="lastUpdated"></span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Keterangan</th>
+                                <th>Jenis</th>
+                                <th>Jumlah</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelTransaksi">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Dashboard Laporan Keuangan</h5>
+                    <p class="mb-0">Sistem informasi keuangan warga Komplek PGRI</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">© 2023 Komplek PGRI. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        // ===============================================
+        // KONFIGURASI - GANTI URL DI SINI
+        // ===============================================
+        // Ganti URL di bawah ini dengan URL Google Apps Script yang sudah di-deploy
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4d37Aj9mf5vho1fskGDVYWZvdcPRIe2mNcHiEKYjwnq0-UciALwYtT-GENXcTjiOP/exec";
+        
+        // Inisialisasi data
+        let allTransaksi = [];
+        let filteredTransaksi = [];
+        let monthlyChart = null;
+        let pieChart = null;
+
+        // Cek konfigurasi saat halaman dimuat
+        window.onload = function() {
+            refreshData();
+        };
+
+        // Format mata uang
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(angka);
+        }
+
+        // Format tanggal
+        function formatDate(dateString) {
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            return new Date(dateString).toLocaleDateString('id-ID', options);
+        }
+
+        // Format tanggal untuk filter
+        function formatDateForFilter(dateString) {
+            const date = new Date(dateString);
+            return {
+                year: date.getFullYear(),
+                month: date.getMonth() + 1,
+                full: date.toISOString().split('T')[0]
+            };
+        }
+
+        // Refresh data dari server
+        function refreshData() {
+            // Tampilkan loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            // Ambil data dari Google Apps Script
+            fetch(`${SCRIPT_URL}?action=read`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+
+                    if (data.status === 'success') {
+                        allTransaksi = data.data;
+                        filteredTransaksi = [...allTransaksi];
+                        
+                        if (allTransaksi.length === 0) {
+                            document.getElementById('emptyState').style.display = 'block';
+                        } else {
+                            document.getElementById('mainContent').style.display = 'block';
+                            updateDashboard();
+                            populateFilterOptions();
+                        }
+                    } else {
+                        // Jika gagal memuat data, tampilkan pesan error
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.querySelector('#emptyState h4').textContent = 'Gagal Memuat Data';
+                        document.querySelector('#emptyState p').textContent = 'Terjadi kesalahan saat memuat data. Silakan coba lagi nanti atau hubungi admin.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.querySelector('#emptyState h4').textContent = 'Gagal Memuat Data';
+                    document.querySelector('#emptyState p').textContent = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda atau hubungi admin.';
+                    console.error('Error:', error);
+                });
+        }
+
+        // Update dashboard
+        function updateDashboard() {
+            hitungRingkasan();
+            tampilkanTabel();
+            updateCharts();
+            updateLastUpdated();
+        }
+
+        // Hitung ringkasan
+        function hitungRingkasan() {
+            const totalPemasukan = filteredTransaksi
+                .filter(t => t.jenis === 'pemasukan')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                
+            const totalPengeluaran = filteredTransaksi
+                .filter(t => t.jenis === 'pengeluaran')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                
+            const saldo = totalPemasukan - totalPengeluaran;
+            
+            document.getElementById('saldo').textContent = formatRupiah(saldo);
+            document.getElementById('pemasukan').textContent = formatRupiah(totalPemasukan);
+            document.getElementById('pengeluaran').textContent = formatRupiah(totalPengeluaran);
+        }
+
+        // Tampilkan tabel
+        function tampilkanTabel() {
+            const tbody = document.getElementById('tabelTransaksi');
+            
+            if (filteredTransaksi.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4">
+                            <p class="mb-0">Tidak ada data transaksi untuk filter yang dipilih</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredTransaksi.map(t => `
+                <tr>
+                    <td>${formatDate(t.tanggal)}</td>
+                    <td>${t.keterangan}</td>
+                    <td>
+                        <span class="badge ${t.jenis === 'pemasukan' ? 'badge-pemasukan' : 'badge-pengeluaran'}">
+                            ${t.jenis === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+                        </span>
+                    </td>
+                    <td>${formatRupiah(parseFloat(t.jumlah))}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Update charts
+        function updateCharts() {
+            updateMonthlyChart();
+            updatePieChart();
+        }
+
+        // Update monthly chart
+        function updateMonthlyChart() {
+            const monthlyData = {};
+            
+            filteredTransaksi.forEach(t => {
+                const date = formatDateForFilter(t.tanggal);
+                const key = `${date.year}-${date.month}`;
+                
+                if (!monthlyData[key]) {
+                    monthlyData[key] = { pemasukan: 0, pengeluaran: 0 };
+                }
+                
+                monthlyData[key][t.jenis] += parseFloat(t.jumlah);
+            });
+
+            const sortedMonths = Object.keys(monthlyData).sort();
+            const labels = sortedMonths.map(month => {
+                const [year, monthNum] = month.split('-');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                return `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+            });
+            
+            const pemasukanData = sortedMonths.map(month => monthlyData[month].pemasukan);
+            const pengeluaranData = sortedMonths.map(month => monthlyData[month].pengeluaran);
+
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+            
+            monthlyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pemasukan',
+                            data: pemasukanData,
+                            backgroundColor: 'rgba(86, 204, 242, 0.8)',
+                            borderColor: 'rgba(86, 204, 242, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Pengeluaran',
+                            data: pengeluaranData,
+                            backgroundColor: 'rgba(255, 65, 108, 0.8)',
+                            borderColor: 'rgba(255, 65, 108, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Rp ' + value.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': Rp ' + context.parsed.y.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update pie chart
+        function updatePieChart() {
+            const totalPemasukan = filteredTransaksi
+                .filter(t => t.jenis === 'pemasukan')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+                
+            const totalPengeluaran = filteredTransaksi
+                .filter(t => t.jenis === 'pengeluaran')
+                .reduce((sum, t) => sum + parseFloat(t.jumlah), 0);
+
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            
+            if (pieChart) {
+                pieChart.destroy();
+            }
+            
+            pieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pemasukan', 'Pengeluaran'],
+                    datasets: [{
+                        data: [totalPemasukan, totalPengeluaran],
+                        backgroundColor: [
+                            'rgba(86, 204, 242, 0.8)',
+                            'rgba(255, 65, 108, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(86, 204, 242, 1)',
+                            'rgba(255, 65, 108, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = 'Rp ' + context.parsed.toLocaleString('id-ID');
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return label + ': ' + value + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Populate filter options
+        function populateFilterOptions() {
+            const months = new Set();
+            const years = new Set();
+            
+            allTransaksi.forEach(t => {
+                const date = formatDateForFilter(t.tanggal);
+                months.add(date.month);
+                years.add(date.year);
+            });
+
+            // Populate month options
+            const monthSelect = document.getElementById('filterMonth');
+            const currentMonth = monthSelect.value;
+            monthSelect.innerHTML = '<option value="">Semua Bulan</option>';
+            
+            const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                               'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            Array.from(months).sort().forEach(month => {
+                const option = document.createElement('option');
+                option.value = month;
+                option.textContent = monthNames[month - 1];
+                monthSelect.appendChild(option);
+            });
+            
+            monthSelect.value = currentMonth;
+
+            // Populate year options
+            const yearSelect = document.getElementById('filterYear');
+            const currentYear = yearSelect.value;
+            yearSelect.innerHTML = '<option value="">Semua Tahun</option>';
+            
+            Array.from(years).sort((a, b) => b - a).forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+            
+            yearSelect.value = currentYear;
+        }
+
+        // Filter data
+        function filterData() {
+            const monthFilter = document.getElementById('filterMonth').value;
+            const yearFilter = document.getElementById('filterYear').value;
+            const typeFilter = document.getElementById('filterType').value;
+
+            filteredTransaksi = allTransaksi.filter(t => {
+                const date = formatDateForFilter(t.tanggal);
+                
+                if (monthFilter && date.month != monthFilter) return false;
+                if (yearFilter && date.year != yearFilter) return false;
+                if (typeFilter && t.jenis != typeFilter) return false;
+                
+                return true;
+            });
+
+            updateDashboard();
+        }
+
+        // Export data ke CSV
+        function exportData() {
+            if (filteredTransaksi.length === 0) {
+                alert('Tidak ada data untuk diekspor');
+                return;
+            }
+
+            let csv = 'Tanggal,Keterangan,Jenis,Jumlah\n';
+            filteredTransaksi.forEach(t => {
+                csv += `${t.tanggal},"${t.keterangan}",${t.jenis},${t.jumlah}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `laporan_keuangan_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Update last updated time
+        function updateLastUpdated() {
+            const now = new Date();
+            const options = { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('lastUpdated').textContent = 
+                'Terakhir diperbarui: ' + now.toLocaleDateString('id-ID', options);
+        }
+    </script>
+</body>
+</html>
